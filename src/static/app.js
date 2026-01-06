@@ -20,12 +20,89 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Main activity content
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
         `;
+
+        // Participants header
+        const participantsHeader = document.createElement("p");
+        participantsHeader.className = "participants-title";
+        participantsHeader.innerHTML = "<strong>Participants:</strong>";
+        activityCard.appendChild(participantsHeader);
+
+        // Participants list
+        const participantsList = document.createElement("ul");
+        participantsList.className = "participants-list";
+
+        if (details.participants && details.participants.length > 0) {
+          details.participants.forEach((participant) => {
+            const li = document.createElement("li");
+            li.className = "participant-item";
+
+            // get display name and email value used for unregistering
+            let displayName = "";
+            let emailValue = "";
+            if (typeof participant === "string") {
+              displayName = participant;
+              emailValue = participant;
+            } else if (participant && (participant.name || participant.email)) {
+              displayName = participant.name || participant.email;
+              emailValue = participant.email || participant.name;
+            } else {
+              displayName = String(participant);
+              emailValue = displayName;
+            }
+
+            const nameSpan = document.createElement("span");
+            nameSpan.textContent = displayName;
+            li.appendChild(nameSpan);
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "participant-delete";
+            deleteBtn.setAttribute("aria-label", `Remove ${displayName}`);
+            deleteBtn.innerHTML = "✖";
+            deleteBtn.addEventListener("click", async () => {
+              if (!confirm(`Unregister ${displayName} from ${name}?`)) return;
+              try {
+                const resp = await fetch(`/activities/${encodeURIComponent(name)}/participants?email=${encodeURIComponent(emailValue)}`, {
+                  method: "DELETE",
+                });
+                if (resp.ok) {
+                  // remove item from DOM
+                  li.remove();
+                  // If no participants left, show "No participants yet"
+                  if (!participantsList.querySelector(".participant-item")) {
+                    const liEmpty = document.createElement("li");
+                    liEmpty.className = "no-participants";
+                    liEmpty.textContent = "No participants yet";
+                    participantsList.appendChild(liEmpty);
+                  }
+                } else {
+                  const err = await resp.json();
+                  alert(err.detail || "Failed to unregister participant");
+                }
+              } catch (err) {
+                console.error("Error unregistering participant:", err);
+                alert("Failed to unregister participant. Please try again.");
+              }
+            });
+
+            li.appendChild(deleteBtn);
+
+            participantsList.appendChild(li);
+          });
+        } else {
+          const li = document.createElement("li");
+          li.className = "no-participants";
+          li.textContent = "No participants yet";
+          participantsList.appendChild(li);
+        }
+
+        activityCard.appendChild(participantsList);
 
         activitiesList.appendChild(activityCard);
 
@@ -62,6 +139,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Refresh activities list so the new participant appears without a page reload
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
