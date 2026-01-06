@@ -20,12 +20,46 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Main activity content
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
         `;
+
+        // Participants header
+        const participantsHeader = document.createElement("p");
+        participantsHeader.className = "participants-title";
+        participantsHeader.innerHTML = "<strong>Participants:</strong>";
+        activityCard.appendChild(participantsHeader);
+
+        // Participants list
+        const participantsList = document.createElement("ul");
+        participantsList.className = "participants-list";
+
+        if (details.participants && details.participants.length > 0) {
+          details.participants.forEach((participant) => {
+            const li = document.createElement("li");
+            li.className = "participant-item";
+            // Support both string participants (e.g. emails) and objects with name/email
+            if (typeof participant === "string") {
+              li.textContent = participant;
+            } else if (participant && (participant.name || participant.email)) {
+              li.textContent = participant.name || participant.email;
+            } else {
+              li.textContent = String(participant);
+            }
+            participantsList.appendChild(li);
+          });
+        } else {
+          const li = document.createElement("li");
+          li.className = "no-participants";
+          li.textContent = "No participants yet";
+          participantsList.appendChild(li);
+        }
+
+        activityCard.appendChild(participantsList);
 
         activitiesList.appendChild(activityCard);
 
